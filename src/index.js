@@ -354,7 +354,7 @@ class ReactPhoneInput extends React.Component {
       event.returnValue = false;
     }
 
-    function _moveHighlight(direction) {
+    const _moveHighlight = direction => {
       this.setState({
         highlightCountryIndex: this._getHighlightCountryIndex(direction)
       }, () => {
