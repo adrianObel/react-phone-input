@@ -149,6 +149,10 @@ class ReactPhoneInput extends React.Component {
         nextProps.defaultCountry !== this.state.defaultCountry) {
           this.updateDefaultCountry(nextProps.defaultCountry);
     }
+
+    if (nextProps.value !== this.props.value) {
+      this.updateValue(nextProps.value);
+    }
   }
 
   scrollTo(country, middle) {
@@ -268,44 +272,8 @@ class ReactPhoneInput extends React.Component {
       event.returnValue = false;
     }
 
-    if(event.target.value.length > 0) {
-      // before entering the number in new format, lets check if the dial code now matches some other country
-      let inputNumber = event.target.value.replace(/\D/g, '');
-
-      // we don't need to send the whole number to guess the country... only the first 6 characters are enough
-      // the guess country function can then use memoization much more effectively since the set of input it
-			// gets has drastically reduced
-      if(!this.state.freezeSelection || this.state.selectedCountry.dialCode.length > inputNumber.length) {
-        newSelectedCountry = this.guessSelectedCountry(inputNumber.substring(0, 6), this.state.onlyCountries, this.state.defaultCountry);
-        freezeSelection = false;
-      }
-      // let us remove all non numerals from the input
-      formattedNumber = this.formatNumber(inputNumber, newSelectedCountry.format);
-    }
-
     let caretPosition = event.target.selectionStart;
-    let oldFormattedText = this.state.formattedNumber;
-    let diff = formattedNumber.length - oldFormattedText.length;
-
-    this.setState({
-      formattedNumber: formattedNumber,
-      freezeSelection: freezeSelection,
-      selectedCountry: newSelectedCountry.dialCode.length > 0 ? newSelectedCountry : this.state.selectedCountry
-    }, function() {
-      if(isModernBrowser) {
-        if(diff > 0) {
-          caretPosition = caretPosition - diff;
-        }
-
-        if(caretPosition > 0 && oldFormattedText.length >= formattedNumber.length) {
-          ReactDOM.findDOMNode(this.refs.numberInput).setSelectionRange(caretPosition, caretPosition);
-        }
-      }
-
-      if(this.props.onChange) {
-        this.props.onChange(this.state.formattedNumber);
-      }
-    });
+    this.updateValue(event.target.value, caretPosition);
   }
 
   handleInputClick(evt) {
@@ -483,6 +451,50 @@ class ReactPhoneInput extends React.Component {
     }
   }
 
+  updateValue(value = '', caretPosition = 0) {
+    let formattedNumber = '+';
+    let newSelectedCountry = this.state.selectedCountry;
+    let freezeSelection = this.state.freezeSelection;
+
+    if (value.length) {
+      // before entering the number in new format, lets check if the dial code now matches some other country
+      let inputNumber = value.replace(/\D/g, '');
+
+      // we don't need to send the whole number to guess the country... only the first 6 characters are enough
+      // the guess country function can then use memoization much more effectively since the set of input it
+  		// gets has drastically reduced
+      if(!this.state.freezeSelection || this.state.selectedCountry.dialCode.length > inputNumber.length) {
+        newSelectedCountry = this.guessSelectedCountry(inputNumber.substring(0, 6), this.state.onlyCountries, this.state.defaultCountry);
+        freezeSelection = false;
+      }
+      // let us remove all non numerals from the input
+      formattedNumber = this.formatNumber(inputNumber, newSelectedCountry.format);
+    }
+
+    let oldFormattedText = this.state.formattedNumber;
+    let diff = formattedNumber.length - oldFormattedText.length;
+
+    this.setState({
+      formattedNumber: formattedNumber,
+      freezeSelection: freezeSelection,
+      selectedCountry: newSelectedCountry.dialCode.length > 0 ? newSelectedCountry : this.state.selectedCountry
+    }, function() {
+      if(isModernBrowser) {
+        if(diff > 0) {
+          caretPosition = caretPosition - diff;
+        }
+
+        if(caretPosition > 0 && oldFormattedText.length >= formattedNumber.length) {
+          ReactDOM.findDOMNode(this.refs.numberInput).setSelectionRange(caretPosition, caretPosition);
+        }
+      }
+
+      if(this.props.onChange) {
+        this.props.onChange(this.state.formattedNumber);
+      }
+    });
+  }
+
   render() {
     let arrowClasses = classNames({
       "arrow": true,
@@ -599,7 +611,4 @@ if (__DEV__) {
   ReactDOM.render(
     <ReactPhoneInput defaultCountry='us' preferredCountries={['us', 'de']} excludeCountries={'in'}/>,
     document.getElementById('content'));
-  ReactDOM.render(
-      <ReactPhoneInput defaultCountry='de' preferredCountries={['it']}/>,
-      document.getElementById('content'));
 }
